@@ -7,6 +7,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
 class Net(nn.Module):
     def __init__(self):
         super().__init__()
@@ -62,49 +64,50 @@ if __name__ == "__main__":
     # imshow(torchvision.utils.make_grid(images))
     # print(' '.join('%5s' % classes[labels[j]] for j in range(batch_size)))
 
-    net = Net()
+    net = Net().to(device)
 
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
 
-    # for epoch in range(2):  # loop over the dataset multiple times
+    for epoch in range(2):  # loop over the dataset multiple times
 
-    #     running_loss = 0.0
-    #     for i, data in enumerate(trainloader, 0):
-    #         # get the inputs; data is a list of [inputs, labels]
-    #         inputs, labels = data
+        running_loss = 0.0
+        for i, data in enumerate(trainloader, 0):
+            # get the inputs; data is a list of [inputs, labels]
+            inputs, labels = data[0].to(device), data[1].to(device)
 
-    #         # zero the parameter gradients
-    #         optimizer.zero_grad()
+            # zero the parameter gradients
+            optimizer.zero_grad()
 
-    #         # forward + backward + optimize
-    #         outputs = net(inputs)
-    #         loss = criterion(outputs, labels)
-    #         loss.backward()
-    #         optimizer.step()
+            # forward + backward + optimize
+            outputs = net(inputs)
+            loss = criterion(outputs, labels)
+            loss.backward()
+            optimizer.step()
 
-    #         # print statistics
-    #         running_loss += loss.item()
-    #         if i % 2000 == 1999:    # print every 2000 mini-batches
-    #             print('[%d, %5d] loss: %.3f' %
-    #                 (epoch + 1, i + 1, running_loss / 2000))
-    #             running_loss = 0.0
+            # print statistics
+            running_loss += loss.item()
+            if i % 2000 == 1999:    # print every 2000 mini-batches
+                print('[%d, %5d] loss: %.3f' %
+                    (epoch + 1, i + 1, running_loss / 2000))
+                running_loss = 0.0
 
-    # print('Finished Training')
+    print('Finished Training')
 
     # Save model
     PATH = './cifar_net.pth'
-    # torch.save(net.state_dict(), PATH)
+    torch.save(net.state_dict(), PATH)
 
     # Test the network on the test data
     dataiter = iter(testloader)
     images, labels = dataiter.next()
+    images, labels = images.to(device), labels.to(device)
 
     # print images
     # imshow(torchvision.utils.make_grid(images))
     # print('GroundTruth: ', ' '.join('%5s' % classes[labels[j]] for j in range(4)))
 
-    net = Net()
+    net = Net().to(device)
     net.load_state_dict(torch.load(PATH))
     outputs = net(images)
 
@@ -117,7 +120,7 @@ if __name__ == "__main__":
     # since we're not training, we don't need to calculate the gradients for our outputs
     with torch.no_grad():
         for data in testloader:
-            images, labels = data
+            inputs, labels = data[0].to(device), data[1].to(device)
             # calculate outputs by running images through the network
             outputs = net(images)
             # the class with the highest energy is what we choose as prediction
@@ -135,7 +138,7 @@ if __name__ == "__main__":
     # again no gradients needed
     with torch.no_grad():
         for data in testloader:
-            images, labels = data
+            images, labels = data[0].to(device), data[1].to(device)
             outputs = net(images)
             _, predictions = torch.max(outputs, 1)
             # collect the correct predictions for each class
